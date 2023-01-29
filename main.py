@@ -6,14 +6,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 WIN_NAME_FULL = "full"
 WIN_NAME_ZOOM = "zoom"
-CUTOUT_RADIUS = 15
+CUTOUT_RADIUS = 50
 
 x0 = -1
 y0 = -1
 
 # setup figure for redrawing
 # first set up the figure itself
-fig, ax = plt.subplots(figsize=(5.5, 5.5))
+fig, ax = plt.subplots(figsize=(10, 10))
 ax.set_aspect(1.)
 divider = make_axes_locatable(ax)
 ax_histx = divider.append_axes("top", 1.2, pad=0.1, sharex=ax)
@@ -86,7 +86,10 @@ def main():
 
         cutout = gray[y0 - CUTOUT_RADIUS: y0 + CUTOUT_RADIUS, x0 - CUTOUT_RADIUS: x0 + CUTOUT_RADIUS]
 
-        cv2.imshow(WIN_NAME_FULL, frame)
+        cv2.circle(frame, (x0, y0), 10, (255, 0, 255), 2)
+
+        big_frame = cv2.resize(frame, (0, 0), fx=2, fy=2)
+        cv2.imshow(WIN_NAME_FULL, big_frame)
         cv2.imshow(WIN_NAME_ZOOM, analyze_cutout(cutout))
 
 
