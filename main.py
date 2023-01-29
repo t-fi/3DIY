@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from pathlib import Path
-import matplotlib.pyplot as plt
+import json
 
 WIN_NAME_FULL = "full"
 WIN_NAME_ZOOM = "zoom"
@@ -71,7 +71,7 @@ def main():
 
     i = 0
 
-    while cv2.waitKey(0):
+    while cv2.waitKey(1):
         i += 1
         ret, frame = video.read()
 
@@ -89,22 +89,15 @@ def main():
         cv2.imshow(WIN_NAME_ZOOM, visualization)
         cv2.circle(frame, (x0, y0), 10, (0, 255, 255), 2)
 
-        positions.append((x0, y0))
+        positions.append((int(x0), int(y0)))
 
         big_frame = cv2.resize(frame, (0, 0), fx=2, fy=2)
         cv2.imshow(WIN_NAME_FULL, big_frame)
         if i == 684:
             break
 
-    fig, ax = plt.subplots()
-    ax.plot([p[0] for p in positions], c="r")
-    ax.set_ylabel("x")
-    ax.set_xlabel("frame number")
-    ax2 = ax.twinx()
-    ax2.plot([p[1] for p in positions], c="g")
-    ax2.set_ylabel("y")
-    plt.title("Positions over time")
-    plt.show()
+    with open("data.json", "w") as f:
+        f.write(json.dumps(positions, indent=4))
 
 
 if __name__ == '__main__':
