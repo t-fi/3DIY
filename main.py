@@ -1,10 +1,11 @@
 import cv2
 import numpy as np
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 WIN_NAME_FULL = "full"
 WIN_NAME_ZOOM = "zoom"
-CUTOUT_RADIUS = 40
+CUTOUT_RADIUS = 35
 
 x0 = -1
 y0 = -1
@@ -50,6 +51,10 @@ def main():
     if not video.isOpened():
         raise ValueError("Could not open video :(")
 
+    # skip first 1565 frames
+    for _ in range(1570):
+        video.read()
+
     cv2.namedWindow(WIN_NAME_FULL)
 
     ret, frame = video.read()
@@ -64,8 +69,12 @@ def main():
     cv2.setMouseCallback(WIN_NAME_FULL, lambda *args: None)
     cv2.namedWindow(WIN_NAME_ZOOM)
 
+    i = 0
+
     while cv2.waitKey(0):
+        i += 1
         ret, frame = video.read()
+
         if not ret:
             return
 
@@ -74,15 +83,28 @@ def main():
         cutout = gray[y0 - CUTOUT_RADIUS: y0 + CUTOUT_RADIUS, x0 - CUTOUT_RADIUS: x0 + CUTOUT_RADIUS]
         cv2.circle(frame, (x0, y0), 10, (255, 0, 255), 2)
 
-        cv2.imshow(WIN_NAME_ZOOM, analyze_cutout(cutout))
+        visualization = analyze_cutout(cutout)
+        cutout_centered = gray[y0 - CUTOUT_RADIUS: y0 + CUTOUT_RADIUS, x0 - CUTOUT_RADIUS: x0 + CUTOUT_RADIUS]
+        visualization = np.hstack((cv2.resize(cutout_centered, (0, 0), fx=4, fy=4), visualization))
+        cv2.imshow(WIN_NAME_ZOOM, visualization)
         cv2.circle(frame, (x0, y0), 10, (0, 255, 255), 2)
 
         positions.append((x0, y0))
 
         big_frame = cv2.resize(frame, (0, 0), fx=2, fy=2)
         cv2.imshow(WIN_NAME_FULL, big_frame)
+        if i == 684:
+            break
 
-
+    fig, ax = plt.subplots()
+    ax.plot([p[0] for p in positions], c="r")
+    ax.set_ylabel("x")
+    ax.set_xlabel("frame number")
+    ax2 = ax.twinx()
+    ax2.plot([p[1] for p in positions], c="g")
+    ax2.set_ylabel("y")
+    plt.title("Positions over time")
+    plt.show()
 
 
 if __name__ == '__main__':
