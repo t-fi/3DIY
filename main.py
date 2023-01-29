@@ -6,25 +6,42 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 WIN_NAME_FULL = "full"
 WIN_NAME_ZOOM = "zoom"
+CUTOUT_RADIUS = 15
 
 x0 = -1
 y0 = -1
 
+# setup figure for redrawing
+# first set up the figure itself
 fig, ax = plt.subplots(figsize=(5.5, 5.5))
+ax.set_aspect(1.)
+divider = make_axes_locatable(ax)
+ax_histx = divider.append_axes("top", 1.2, pad=0.1, sharex=ax)
+ax_histy = divider.append_axes("right", 1.2, pad=0.1, sharey=ax)
+# then plot a dummy cutout
+dummy_cutout = np.random.uniform(0, 255, (CUTOUT_RADIUS * 2, CUTOUT_RADIUS * 2))
+
+hist_x = np.sum(dummy_cutout, axis=0)
+hist_y = np.sum(dummy_cutout, axis=1)
+
+ax_mat = ax.matshow(dummy_cutout)
+ax_hist_x = ax_histx.bar(range(len(hist_x)), hist_x)
+ax_hist_y = ax_histy.barh(range(len(hist_y)), hist_y)
+
+plt.ion()
 
 
 def analyze_cutout(cutout):
-    ax.set_aspect(1.)
-    divider = make_axes_locatable(ax)
-    ax_histx = divider.append_axes("top", 1.2, pad=0.1, sharex=ax)
-    ax_histy = divider.append_axes("right", 1.2, pad=0.1, sharey=ax)
-
     hist_x = np.sum(cutout, axis=0)
     hist_y = np.sum(cutout, axis=1)
 
-    ax.matshow(cutout)
-    ax_histx.bar(range(len(hist_x)), hist_x)
-    ax_histy.barh(range(len(hist_y)), hist_y)
+    ax_mat.set_data(cutout)
+
+    for bar, data in zip(ax_hist_x, hist_x):
+        bar.set_height(data)
+
+    for bar, data in zip(ax_hist_y, hist_y):
+        bar.set_width(data)
 
     fig.canvas.draw()
     return cv2.cvtColor(np.asarray(fig.canvas.buffer_rgba()), cv2.COLOR_RGB2BGR)
@@ -60,18 +77,14 @@ def main():
     cv2.setMouseCallback(WIN_NAME_FULL, lambda *args: None)
     cv2.namedWindow(WIN_NAME_ZOOM)
 
-    i = 0
     while cv2.waitKey(0):
         ret, frame = video.read()
         if not ret:
             return
 
-        print(f"created figure {i}")
-        i += 1
-
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        cutout_radius = 15
-        cutout = gray[y0 - cutout_radius: y0 + cutout_radius, x0 - cutout_radius: x0 + cutout_radius]
+
+        cutout = gray[y0 - CUTOUT_RADIUS: y0 + CUTOUT_RADIUS, x0 - CUTOUT_RADIUS: x0 + CUTOUT_RADIUS]
 
         cv2.imshow(WIN_NAME_FULL, frame)
         cv2.imshow(WIN_NAME_ZOOM, analyze_cutout(cutout))
