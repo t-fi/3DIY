@@ -5,16 +5,20 @@ import json
 
 WIN_NAME_FULL = "full"
 WIN_NAME_ZOOM = "zoom"
-CUTOUT_RADIUS = 35
+CUTOUT_X = 20
+CUTOUT_Y = 50
 
-x0 = -1
-y0 = -1
+x0 = 106
+y0 = 438
+
+x0f = float(x0)
+y0f = float(y0)
 
 positions = []
 
 
 def analyze_cutout(cutout):
-    global x0, y0
+    global x0, y0, x0f, y0f
 
     ret, thr = cv2.threshold(cutout, 40, 255, cv2.THRESH_BINARY)
 
@@ -25,10 +29,13 @@ def analyze_cutout(cutout):
 
     largest_component_index = np.argmax(stats[1:, 4]) + 1
 
-    blob_center = centroids[largest_component_index].astype(int)
+    blob_center = centroids[largest_component_index]
 
-    x0 += blob_center[0] - CUTOUT_RADIUS
-    y0 += blob_center[1] - CUTOUT_RADIUS
+    x0f = int(x0f) + blob_center[0] - CUTOUT_X
+    y0f = int(y0f) + blob_center[1] - CUTOUT_Y
+
+    x0 = int(x0f)
+    y0 = int(y0f)
 
     visualization = np.hstack((cutout, thr))
 
@@ -36,9 +43,11 @@ def analyze_cutout(cutout):
 
 
 def choose_start(event, x, y, flags, param):
-    global x0, y0
+    global x0, y0, x0f, y0f
     if event == cv2.EVENT_LBUTTONDOWN:
         x0, y0 = x, y
+        x0f = float(x0)
+        y0f = float(y0)
 
 
 def main():
@@ -51,7 +60,6 @@ def main():
     if not video.isOpened():
         raise ValueError("Could not open video :(")
 
-    # skip first 1565 frames
     for _ in range(1570):
         video.read()
 
@@ -71,30 +79,38 @@ def main():
 
     i = 0
 
-    while cv2.waitKey(1):
+    while cv2.waitKey(0):
         i += 1
-        ret, frame = video.read()
 
-        if not ret:
-            return
+        # frame skip at 695.... haxcore fix
+        if i == 695:
+            frame[:-20] = frame[20:]
+            gray[:-20] = gray[20:]
+        else:
+            ret, frame = video.read()
+            gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+            if not ret:
+                return
 
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-
-        cutout = gray[y0 - CUTOUT_RADIUS: y0 + CUTOUT_RADIUS, x0 - CUTOUT_RADIUS: x0 + CUTOUT_RADIUS]
+        cutout = gray[y0 - CUTOUT_Y: y0 + CUTOUT_Y, x0 - CUTOUT_X: x0 + CUTOUT_X]
         cv2.circle(frame, (x0, y0), 10, (255, 0, 255), 2)
 
         visualization = analyze_cutout(cutout)
-        cutout_centered = gray[y0 - CUTOUT_RADIUS: y0 + CUTOUT_RADIUS, x0 - CUTOUT_RADIUS: x0 + CUTOUT_RADIUS]
+        cutout_centered = gray[y0 - CUTOUT_Y: y0 + CUTOUT_Y, x0 - CUTOUT_X: x0 + CUTOUT_X]
         visualization = np.hstack((cv2.resize(cutout_centered, (0, 0), fx=4, fy=4), visualization))
         cv2.imshow(WIN_NAME_ZOOM, visualization)
         cv2.circle(frame, (x0, y0), 10, (0, 255, 255), 2)
 
-        positions.append((int(x0), int(y0)))
+        positions.append([float(x0f), float(y0f)])
 
         big_frame = cv2.resize(frame, (0, 0), fx=2, fy=2)
+        cv2.putText(big_frame, f"idx: {i}", (10, 100), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 3)
+
         cv2.imshow(WIN_NAME_FULL, big_frame)
+        print(i)
         if i == 684:
-            break
+            pass
+            # break
 
     with open("data.json", "w") as f:
         f.write(json.dumps(positions, indent=4))

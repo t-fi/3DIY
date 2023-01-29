@@ -7,7 +7,7 @@ def main():
     with open("data.json", "r") as f:
         positions = json.load(f)
 
-    m = len(positions) / 17.1
+    m = len(positions) / 17.047
     tm = [t % m for t in range(len(positions))]
     x = np.array([p[0] for p in positions])
     y = np.array([p[1] for p in positions])
