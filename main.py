@@ -1,50 +1,37 @@
 import cv2
 import numpy as np
 from pathlib import Path
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 WIN_NAME_FULL = "full"
 WIN_NAME_ZOOM = "zoom"
-CUTOUT_RADIUS = 50
+CUTOUT_RADIUS = 40
 
 x0 = -1
 y0 = -1
 
-# setup figure for redrawing
-# first set up the figure itself
-fig, ax = plt.subplots(figsize=(10, 10))
-ax.set_aspect(1.)
-divider = make_axes_locatable(ax)
-ax_histx = divider.append_axes("top", 1.2, pad=0.1, sharex=ax)
-ax_histy = divider.append_axes("right", 1.2, pad=0.1, sharey=ax)
-# then plot a dummy cutout
-dummy_cutout = np.random.uniform(0, 255, (CUTOUT_RADIUS * 2, CUTOUT_RADIUS * 2))
-
-hist_x = np.sum(dummy_cutout, axis=0)
-hist_y = np.sum(dummy_cutout, axis=1)
-
-ax_mat = ax.matshow(dummy_cutout)
-ax_hist_x = ax_histx.bar(range(len(hist_x)), hist_x)
-ax_hist_y = ax_histy.barh(range(len(hist_y)), hist_y)
-
-plt.ion()
+positions = []
 
 
 def analyze_cutout(cutout):
-    hist_x = np.sum(cutout, axis=0)
-    hist_y = np.sum(cutout, axis=1)
+    global x0, y0
 
-    ax_mat.set_data(cutout)
+    ret, thr = cv2.threshold(cutout, 40, 255, cv2.THRESH_BINARY)
 
-    for bar, data in zip(ax_hist_x, hist_x):
-        bar.set_height(data)
+    ret, labels, stats, centroids = cv2.connectedComponentsWithStats(thr)
 
-    for bar, data in zip(ax_hist_y, hist_y):
-        bar.set_width(data)
+    if ret == 1:
+        raise ValueError("Only the background label was found :(")
 
-    fig.canvas.draw()
-    return cv2.cvtColor(np.asarray(fig.canvas.buffer_rgba()), cv2.COLOR_RGB2BGR)
+    largest_component_index = np.argmax(stats[1:, 4]) + 1
+
+    blob_center = centroids[largest_component_index].astype(int)
+
+    x0 += blob_center[0] - CUTOUT_RADIUS
+    y0 += blob_center[1] - CUTOUT_RADIUS
+
+    visualization = np.hstack((cutout, thr))
+
+    return cv2.resize(visualization, (0, 0), fx=4, fy=4)
 
 
 def choose_start(event, x, y, flags, param):
@@ -85,12 +72,17 @@ def main():
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
         cutout = gray[y0 - CUTOUT_RADIUS: y0 + CUTOUT_RADIUS, x0 - CUTOUT_RADIUS: x0 + CUTOUT_RADIUS]
-
         cv2.circle(frame, (x0, y0), 10, (255, 0, 255), 2)
+
+        cv2.imshow(WIN_NAME_ZOOM, analyze_cutout(cutout))
+        cv2.circle(frame, (x0, y0), 10, (0, 255, 255), 2)
+
+        positions.append((x0, y0))
 
         big_frame = cv2.resize(frame, (0, 0), fx=2, fy=2)
         cv2.imshow(WIN_NAME_FULL, big_frame)
-        cv2.imshow(WIN_NAME_ZOOM, analyze_cutout(cutout))
+
+
 
 
 if __name__ == '__main__':
