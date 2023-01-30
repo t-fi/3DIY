@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 import json
+from tqdm import tqdm
 
 WIN_NAME_FULL = "full"
 WIN_NAME_ZOOM = "zoom"
@@ -15,6 +16,14 @@ x0f = float(x0)
 y0f = float(y0)
 
 positions = []
+
+
+def read_frames_from_folder(folder_path: Path, start_frame: int, end_frame: int = None):
+    image_files = sorted(folder_path.glob("*.png"))
+    images = []
+    for file in tqdm(image_files[start_frame:end_frame]):
+        images.append(cv2.imread(str(file)))
+    return images
 
 
 def analyze_cutout(cutout):
@@ -56,22 +65,13 @@ def choose_start(event, x, y, flags, param):
 
 
 def main():
-    video_path = Path("/home/oba/data/crop.mp4")
-    if not video_path.exists():
-        raise ValueError("The video file does not exist: " + str(video_path))
+    image_folder_path = Path("/home/oba/data/frames")
+    if not image_folder_path.exists():
+        raise ValueError("The image folder does not exist: " + str(image_folder_path))
 
-    video = cv2.VideoCapture(str(video_path))
+    images = read_frames_from_folder(image_folder_path, 1570, 3578)
 
-    if not video.isOpened():
-        raise ValueError("Could not open video :(")
-
-    for _ in range(1570):
-        video.read()
-
-    cv2.namedWindow(WIN_NAME_FULL)
-
-    ret, frame = video.read()
-    cv2.imshow(WIN_NAME_FULL, frame)
+    cv2.imshow(WIN_NAME_FULL, images[0])
     cv2.setMouseCallback(WIN_NAME_FULL, choose_start)
 
     while cv2.waitKey(20):
@@ -89,18 +89,10 @@ def main():
     while cv2.waitKey(dt):
         i += 1
 
-        if i > 690:
-            dt = 0
-
-        # frame skip at 695.... haxcore fix
-        if i == 10000:
-            frame[:-20] = frame[20:]
-            gray[:-20] = gray[20:]
-        else:
-            ret, frame = video.read()
-            gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-            if not ret:
-                return
+        if i == len(images):
+            break
+        frame = images[i]
+        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
         cutout = gray[y0 - CUTOUT_Y: y0 + CUTOUT_Y, x0 - CUTOUT_X: x0 + CUTOUT_X]
         cv2.circle(frame, (x0, y0), 10, (255, 0, 255), 2)
@@ -118,9 +110,6 @@ def main():
 
         cv2.imshow(WIN_NAME_FULL, big_frame)
         print(i)
-        if i == 684:
-            pass
-            # break
 
     with open("data.json", "w") as f:
         f.write(json.dumps(positions, indent=4))
