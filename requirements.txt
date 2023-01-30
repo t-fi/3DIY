@@ -2,3 +2,4 @@ opencv-python~=4.7.0.68
 numpy~=1.24.1
 matplotlib
 tqdm
+scipy
