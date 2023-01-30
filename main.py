@@ -15,12 +15,22 @@ y0 = 438
 positions = []
 
 
-def read_frames_from_folder(folder_path: Path, start_frame: int, end_frame: int = None):
-    image_files = sorted(folder_path.glob("*.png"))
-    images = []
-    for file in tqdm(image_files[start_frame:end_frame]):
-        images.append(cv2.imread(str(file)))
-    return images
+class FrameReader:
+    def __init__(self, folder_path: Path, start_frame: int, end_frame: int = None):
+        self.image_files = sorted(folder_path.glob("*.png"))[start_frame:end_frame]
+        self.idx = -1
+
+    def __len__(self):
+        return len(self.image_files)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.idx += 1
+        if self.idx == len(self):
+            raise StopIteration
+        return cv2.imread(str(self.image_files[self.idx]))
 
 
 def analyze_cutout(cutout):
@@ -61,9 +71,9 @@ def main():
     if not image_folder_path.exists():
         raise ValueError("The image folder does not exist: " + str(image_folder_path))
 
-    images = read_frames_from_folder(image_folder_path, 1570, 3578)
+    frames = FrameReader(image_folder_path, 1570, 3578)
 
-    cv2.imshow(WIN_NAME_FULL, images[0])
+    cv2.imshow(WIN_NAME_FULL, next(frames))
     cv2.setMouseCallback(WIN_NAME_FULL, choose_start)
 
     while cv2.waitKey(20):
@@ -74,7 +84,7 @@ def main():
     cv2.setMouseCallback(WIN_NAME_FULL, lambda *args: None)
     cv2.namedWindow(WIN_NAME_ZOOM)
 
-    for frame in tqdm(images):
+    for frame in tqdm(frames):
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
 
         cutout = gray[int(y0) - CUTOUT_Y: int(y0) + CUTOUT_Y, int(x0) - CUTOUT_X: int(x0) + CUTOUT_X]
