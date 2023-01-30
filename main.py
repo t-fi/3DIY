@@ -27,7 +27,12 @@ def analyze_cutout(cutout):
     if ret == 1:
         raise ValueError("Only the background label was found :(")
 
-    largest_component_index = np.argmax(stats[1:, 4]) + 1
+    # width minus height should be small
+    roundnesses = stats[1:, 2] - stats[1:, 2] + 4
+
+    metric = stats[1:, 4] / roundnesses
+
+    largest_component_index = np.argmax(metric) + 1
 
     blob_center = centroids[largest_component_index]
 
@@ -79,11 +84,16 @@ def main():
 
     i = 0
 
-    while cv2.waitKey(0):
+    dt = 1
+
+    while cv2.waitKey(dt):
         i += 1
 
+        if i > 690:
+            dt = 0
+
         # frame skip at 695.... haxcore fix
-        if i == 695:
+        if i == 10000:
             frame[:-20] = frame[20:]
             gray[:-20] = gray[20:]
         else:
