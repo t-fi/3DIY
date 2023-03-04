@@ -9,22 +9,22 @@ Tracking the nozzle should be robust and have sub pixel resolution. Given an ini
 
 Purple is the original nozzle position, yellow the newly found one:
 
-![](https://github.com/t-fi/3DIY/big.gif)
+![](big.gif)
 
 ROI of the tracking region and internal state: Stabilized nozzle on the left, next pixture nozzle ROI in the middle, binarized view of ROI to visualize the tracked blob:
 
-![](https://github.com/t-fi/3DIY/vis.gif)
+![](vis.gif)
 
 # Data analysis
 Observing the raw X Y positions yields several key insights:
 
 1. The travel moves show repeatable oscillation patterns, distinct for upward and downward moves:
-![](https://github.com/t-fi/3DIY/raw_xy.png)
+![](raw_xy.png)
 2. There is a slight misalignment of the video pixel coordinates and the print head move directions. This can be corrected with a heuristically determined rotation.
 3. The oscillation of a single move is hard to see, since there are few frames per move and noisy positions:
-![](https://github.com/t-fi/3DIY/raw_xy_zoom.png)
+   ![](raw_xy_zoom.png)
 4. Since the frame acquisition frequency and the print head move frequency alias, we can overlay all 50 moves to get a much more detailed position history:
-![](https://github.com/t-fi/3DIY/oversample_xy.png)
+![](oversample_xy.png)
 # Summary
 This repo shows a POC for tracking printer moves with a generic smartphone camera. It is possible to extract subpixel information of the nozzle position and to overcome the sample rate of the camera sensor by repetitive moves.
 
